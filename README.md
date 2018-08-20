@@ -7,6 +7,9 @@ You do not need to run all the code in this repository, just the code in the lan
 
 You may write your own. Any API that conforms to the specification in this document, and returns the same results as the reference implementation(s) can be considered a valid mogwai-api.
 
+# core dependency
+All implementations will need to connect to a full mogwaid node to provide up-to-the-moment information.  The means of connecting is left as an implementation specific detail for each language and environment.
+
 # routes
 A valid mogwai-api implementation MUST provide the following RESTful API routes.  
 
