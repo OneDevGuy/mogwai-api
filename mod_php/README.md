@@ -4,7 +4,7 @@ This implementation seeks to use the minimum amount of dependencies and to be co
 
 # dependencies
 
-* Apache with mod_php  (usually already compiled in)
+* Apache with mod_php  (usually already provided by default and enabled)
 * cURL in PHP  (usually already compiled in)
 * JSON in PHP  (usually already compiled in)
 * mogwaid with RPC settings
