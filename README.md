@@ -21,8 +21,23 @@ In the following, the input types are as follows:
 * :numblocks is a positive integer
 * :hex is a hexidecimal string (without leading 0x)
 
+All API calls return non-empty results; an API call that returns an empty result is in error.  Simple scalar results are returned as strings representing their value.  Complex/structured results are returned as JSON-encoded strings.
+
+## help 
+GET /
+and 
+GET /help 
+
+_Return help contents including the API version, and information about each of the routes supported_
+
+## test
+GET /test
+
+_Return a JSON-encoded object demonstrating the result of test data for each route (except test), and also a hash of all results, for easy comparison of compliance between two implementations_
+
 ## getbalance
 GET /getbalance/:address
+_Return scalar string representing a floating point value for the balance of the provided address_
 
 ## listtransactions
 GET /listtransactions/:address
@@ -43,3 +58,4 @@ GET /getevents/:height/:numblocks
 
 ## sendrawtransaction
 GET /sendrawtransaction/:hex
+
