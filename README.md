@@ -25,7 +25,9 @@ All API calls return non-empty results; an API call that returns an empty result
 
 ## help 
 GET /
-and 
+
+_and_ 
+
 GET /help 
 
 _Return help contents including the API version, and information about each of the routes supported_
