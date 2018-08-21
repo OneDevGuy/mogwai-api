@@ -152,7 +152,11 @@ function register_route($verb, $path, $callback) {
  * @param  array $route Associative array containing route info
  * @return string|array        Output of callback function
  */
-function process_route($route) {
+function process_route($route = null) {
+    if (empty($route)) {
+        $route = get_route();
+    }
+
     if (empty($route['actual_path'])) {
         return false;
     }
