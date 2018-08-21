@@ -61,3 +61,5 @@ GET /getevents/:height/:numblocks
 ## sendrawtransaction
 GET /sendrawtransaction/:hex
 
+# 404 not found 
+Any unmatched route should return the literal text "404: No route found", including valid routes that are not yet implemented.
