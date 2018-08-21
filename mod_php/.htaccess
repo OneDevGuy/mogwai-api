@@ -1,0 +1,5 @@
+RewriteEngine On
+#RewriteBase /mog1/api/
+RewriteCond %{REQUEST_FILENAME}% !-d
+RewriteCond %{REQUEST_FILENAME}% !-f
+RewriteRule ^(.+)$ index.php [QSA,L]
