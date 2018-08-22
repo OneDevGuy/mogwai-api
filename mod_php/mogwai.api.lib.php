@@ -38,6 +38,12 @@ function get_route() {
             continue;
         }
 
+        // special case for root where route is ""
+        if ($request === '' && $key == "GET /") {
+            $route['actual_path'] = '/';
+            return $route; 
+        }
+
         $path_parts = explode('/', $request);
         if (count($path_parts) != count($route['path_parts'])) {
             continue;
