@@ -33,7 +33,7 @@ function get_route() {
     $verb = @$_SERVER['REQUEST_METHOD'] ? $_SERVER['REQUEST_METHOD'] : 'GET';
 
     // look through valid registered routes to find a matching route
-    foreach ($mogwai_router as $route) {
+    foreach ($mogwai_router as $key => $route) {
         if ($verb != $route['verb']) {
             continue;
         }
@@ -50,7 +50,7 @@ function get_route() {
 
             // if a non-variable part of path does not match, this is the wrong route
             if ($p != $path_parts[$ix]) {
-                return false;
+                continue 2;
             }
         }
 
@@ -93,6 +93,7 @@ function register_route($verb, $path, $callback) {
     // discard leading and trailing slash in path, if found
     $path = trim($path, '/');
     $variables = array();
+    $path_parts = array();
     $id = "$verb /"; // a unique signature of this route, so we can detect duplicates
 
     // if path is not empty (special case allows empty path), parse the path
@@ -166,8 +167,14 @@ function process_route($route = null) {
     }
 
     // if we don't have args, just call the function
-    if (count($route['variables']) < 1) {
-        return $route['callback']();
+    $ct = @$route['variables'] ? count($route['variables']) : 0;
+    if ($ct < 1) {
+        $result = $route['callback']();
+        if (is_array($result) || is_object($result)) {
+            $result = json_encode($result);
+        }
+        echo $result;
+        return true;
     }
 
     // get parameters from actual_path
@@ -183,7 +190,12 @@ function process_route($route = null) {
         $args[] = $path_parts[$ix];
     }
 
-    return call_user_func_array($route['callback'], $args);
+    $result = call_user_func_array($route['callback'], $args);
+    if (is_array($result) || is_object($result)) {
+        $result = json_encode($result);
+    }
+    echo $result;
+    return true;
 }
 
 /**
@@ -288,3 +300,4 @@ function expand_tilde($path)
 
     return $path;
 }
+
