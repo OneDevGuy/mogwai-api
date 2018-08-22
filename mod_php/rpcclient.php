@@ -88,9 +88,13 @@ class RPCClient
     private $whitelist_functions = array(
         "listtransactions",
         "listmirrtransaction",
+        "getblockhash",
+        "getbestblockhash",
         "getblock",
         "getblocks",
         "sendrawtransaction",
+        "getaddressbalance",
+        "getbalance",
 
 
         // "help",
