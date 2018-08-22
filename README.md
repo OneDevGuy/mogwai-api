@@ -39,7 +39,10 @@ _Return a JSON-encoded object demonstrating the result of test data for each rou
 
 ## getbalance
 GET /getbalance/:address
-_Return scalar string representing a floating point value for the balance of the provided address_
+
+Success: _Return scalar string representing a floating point value for the balance of the provided address_
+
+Error: _Return error string "Invalid address"_
 
 ## listtransactions
 GET /listtransactions/:address
@@ -53,7 +56,7 @@ GET /getblock
 GET /getblock/:height
 
 ## getblocks
-GET /getblock/:height/:numblocks
+GET /getblocks/:height/:numblocks
 
 ## getevents
 GET /getevents/:height/:numblocks
