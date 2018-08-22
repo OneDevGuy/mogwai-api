@@ -301,3 +301,19 @@ function expand_tilde($path)
     return $path;
 }
 
+
+function from_satoshi($s){
+    if (is_int($s)) { 
+        return $s / 1e8;
+    }
+
+    return false;
+}
+
+function to_satoshi($m) {
+    if (is_numeric($m)) {
+        return round($m * 1e8, 8);
+    }
+
+    return false;
+}
