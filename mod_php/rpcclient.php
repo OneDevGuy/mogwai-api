@@ -95,6 +95,9 @@ class RPCClient
         "sendrawtransaction",
         "getaddressbalance",
         "getbalance",
+        "getblockcount",
+        "getrawtransaction",
+        "decoderawtransaction",
 
 
         // "help",
@@ -172,11 +175,13 @@ class RPCClient
         // Check whitelist or blacklist for allowable functions
         if ($this->whitelist_mode) {
             if (!in_array($method, $this->whitelist_functions)) {
+                fwrite(STDERR, "$method is not a whitelisted function" . PHP_EOL);
                 return false;
             }
         }
         else {
             if (in_array($method, $this->blacklist_functions)) {
+                fwrite(STDERR, "$method is a blacklisted function" . PHP_EOL);
                 return false;
             }
         }
