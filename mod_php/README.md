@@ -24,6 +24,13 @@ This implementation seeks to use the minimum amount of dependencies and to be co
 Place files in a directory served by Apache running mod_php.  The directory does not need to be the root web directory (this 
 API can run in a subdirectory).
 
+Add a database and database user in MySQL. i.e.: 
+
+* mysql [-u privilegeduser -p]
+* mysql> CREATE USER 'mogwai'@'localhost' IDENTIFIED BY 'somedifficultpassword';
+* mysql> CREATE DATABASE `mogwai`;
+* mysql> GRANT ALL ON mogwai.\* TO 'mogwai'@'localhost';
+
 Edit .credentials.php with rpc and db credentials.
 
 
