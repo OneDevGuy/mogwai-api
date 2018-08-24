@@ -18,3 +18,12 @@ This implementation seeks to use the minimum amount of dependencies and to be co
   * addressindex=true
   * timestampindex=true
   * spentindex=true
+
+# deployment
+
+Place files in a directory served by Apache running mod_php.  The directory does not need to be the root web directory (this 
+API can run in a subdirectory).
+
+Edit .credentials.php with rpc and db credentials.
+
+
