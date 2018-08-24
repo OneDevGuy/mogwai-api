@@ -80,6 +80,20 @@ function get_block($height = null, $count = 1) {
         if ($block_hash) {
             $block = $rpc->getblock($block_hash);
             if ($block) {
+                if (!empty($block['tx'])) {
+                    foreach ($block['tx'] as $key => $tx_hash) {
+                        $tx = $rpc->getrawtransaction($tx_hash);
+
+                        if ($tx) {
+                            $tx = $rpc->decoderawtransaction($tx);
+                        }
+
+                        if ($tx) {
+                            $block['tx'][$key] = $tx;
+                        }
+                    }
+                }
+
                 if ($count == 1) {
                     return $block;
                 }
