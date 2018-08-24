@@ -28,7 +28,7 @@ Add a database and database user in MySQL. i.e.:
 
 * mysql [-u privilegeduser -p]
 * mysql> CREATE USER 'mogwai'@'localhost' IDENTIFIED BY 'somedifficultpassword';
-* mysql> CREATE DATABASE `mogwai`;
+* mysql> CREATE DATABASE \`mogwai\`;
 * mysql> GRANT ALL ON mogwai.\* TO 'mogwai'@'localhost';
 
 Edit .credentials.php with rpc and db credentials.
