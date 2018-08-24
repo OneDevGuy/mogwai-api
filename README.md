@@ -55,6 +55,10 @@ GET /getblock
 
 GET /getblock/:height
 
+Success: _Return JSON string repesenting a single block at the specified height or at current block height_
+
+Error: _Return error string "Block height out of range"_
+
 ## getblocks
 GET /getblocks/:height/:numblocks
 
