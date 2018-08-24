@@ -55,12 +55,12 @@ GET /getblock
 
 GET /getblock/:height
 
-Success: _Return JSON string repesenting a single block at the specified height or at current block height_
+GET /getblock/:height/:numblocks
 
-Error: _Return error string "Block height out of range"_
+Success: _Return JSON string repesenting a single block (or array of blocks) at the specified height or at current block height_
 
-## getblocks
-GET /getblocks/:height/:numblocks
+Error: _Return error string "Block height out of range" or "Block count invalid"_
+
 
 ## getevents
 GET /getevents/:height/:numblocks
