@@ -33,4 +33,12 @@ Add a database and database user in MySQL. i.e.:
 
 Edit .credentials.php with rpc and db credentials.
 
+To bootstrap the database, import mogwai.sql:
+
+* mysql mogwai -u mogwai < mogwai.sql   # enter your difficult password when prompted
+
+Set up cron to regularly update the database:
+
+* crontab -eu www-data  # replace www-data with your apache user, if different.  some systems use httpd
+* \* \* \* \* \* [/path/to/your/mogwaiapi/directory/].indexer.php
 
