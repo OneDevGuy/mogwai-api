@@ -7,3 +7,10 @@ $rpc_credentials = array(
     'port' => '17710',
 );
 
+$db_credentials = array(
+    'user' => 'mogwai',
+    'password' => '',
+    'name' => 'mogwai',
+    'host' => 'localhost',
+);
+
