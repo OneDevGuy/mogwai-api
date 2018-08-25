@@ -43,8 +43,9 @@ while ($blockcount_db < $blockcount) {
         die("Panic!  Received empty blockhash at height $blockcount_db" . PHP_EOL);
     }
 
+    $mysqli->query("INSERT IGNORE INTO `blocks_hashes` (`block`, `hash`) VALUES ($blockcount_db, '$hash')") or die ("invalid query" . PHP_EOL);
+
     $block = $rpc->getblock($hash);
-    // print_r($block);
 
     foreach ($block["tx"] as $tx) {
         $tx = $mysqli->real_escape_string($tx);
@@ -80,7 +81,6 @@ while ($blockcount_db < $blockcount) {
                 }
             }
 
-            // print_r($transaction);
         }
         else {
             echo "Could not get raw transaction for $blockcount_db : $tx" . PHP_EOL;
@@ -89,8 +89,6 @@ while ($blockcount_db < $blockcount) {
 
     $blockcount_db = intval($block['height']) + 1;
 
-
-    //if ($blockcount_db > 3) break;
 }
 
 
@@ -105,6 +103,21 @@ while ($blockcount_db < $blockcount) {
 
 function create_tables($tablename = null) {
     global $mysqli;
+
+
+    if (!$mysqli->query('select 1 from `blocks_hashes` LIMIT 1')) {
+        $query = "CREATE TABLE IF NOT EXISTS `blocks_hashes` (
+              `block` int(11) unsigned NOT NULL,
+              `hash` char(64) NOT NULL DEFAULT '',
+              UNIQUE KEY `ix_blocks_hashes` (`block`,`hash`),
+              KEY `ix_block` (`block`),
+              KEY `ix_hashes` (`hash`)
+            ) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+        ";
+
+        $mysqli->real_query($query);
+        echo "Created table `block_hashes`" . PHP_EOL;
+    }
 
     if (!$mysqli->query('select 1 from `blocks_addresses` LIMIT 1')) {
         $query = "CREATE TABLE IF NOT EXISTS `blocks_addresses` (
