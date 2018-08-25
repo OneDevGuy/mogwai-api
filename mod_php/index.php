@@ -40,7 +40,60 @@ $r = register_route('GET', '/getblock/:height', function($height) {
     return get_block(intval($height));
 });
 
-$r = register_route('GET', '/getblocks/:height/:count', function($height, $count) {
+$r = register_route('GET', '/getblock/:height/:count', function($height, $count) {
+    return get_block(intval($height), intval($count));
+});
+
+$r = register_route('GET', '/getevents/:height/:count', function($height, $count) {
+    global $rpc, $mysqli;
+    $height = intval($height);
+    $count = intval($count);
+
+    $max_block = $rpc->getblockcount();
+
+    if ($height < 0 || $height > $max_block) {
+        return "Block height out of range";
+    }
+
+    if ($count < 1) {
+        return "Invalid block count";
+    }
+
+    $max_height = $height + $count;
+
+    $events = array(
+        "FEED",
+        "CACA",
+        "FACE",
+    );
+
+    // if no events specified, return empty JSON array
+    if (empty($events)) {
+        return "[]";
+    }
+
+    $WHERE = "";
+    foreach ($events as $e) {
+        if ($WHERE) {
+            $WHERE .= " OR ";
+        }
+        $WHERE .= "`hash` like '%{$e}%' ";
+    }
+
+    // query the database for block hashes containing any of the $events strings
+    $query = "SELECT *
+        FROM `blocks_hashes`
+        WHERE `block` >= $height AND `block` <= $max_height
+            AND ($WHERE)
+        ORDER BY `block`
+        LIMIT $count
+    ";
+    // return $query;
+    $res = $mysqli->query($query);
+    $data = $res->fetch_all(MYSQLI_ASSOC);
+
+    return $data;
+
     return get_block(intval($height), intval($count));
 });
 
