@@ -177,7 +177,12 @@ function process_route($route = null) {
     if ($ct < 1) {
         $result = $route['callback']();
         if (is_array($result) || is_object($result)) {
-            $result = json_encode($result);
+            if (defined('JSON_PRETTY_PRINT')) {
+                $result = json_encode($result, JSON_PRETTY_PRINT);
+            }
+            else {
+                $result = json_encode($result);
+            }
         }
         echo $result;
         return true;
@@ -198,7 +203,12 @@ function process_route($route = null) {
 
     $result = call_user_func_array($route['callback'], $args);
     if (is_array($result) || is_object($result)) {
-        $result = json_encode($result);
+        if (defined('JSON_PRETTY_PRINT')) {
+            $result = json_encode($result, JSON_PRETTY_PRINT);
+        }
+        else {
+            $result = json_encode($result);
+        }
     }
     echo $result;
     return true;
