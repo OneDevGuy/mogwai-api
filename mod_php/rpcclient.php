@@ -98,6 +98,7 @@ class RPCClient
         "getblockcount",
         "getrawtransaction",
         "decoderawtransaction",
+        "getblockheader",
 
 
         // "help",
