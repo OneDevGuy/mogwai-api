@@ -41,7 +41,7 @@ function get_route() {
         // special case for root where route is ""
         if ($request === '' && $key == "GET /") {
             $route['actual_path'] = '/';
-            return $route; 
+            return $route;
         }
 
         $path_parts = explode('/', $request);
@@ -120,7 +120,9 @@ function register_route($verb, $path, $callback) {
             else {
                 $id .= "$p/";
             }
-            $sanitized = preg_replace('/[^a-zA-Z_-]/', '', $p);
+
+            // these are the only allowable characters
+            $sanitized = preg_replace('/[^a-zA-Z0-9_-]/', '', $p);
 
             // if sanitization does not return the same string, an invalid char was submitted
             if ($sanitized !== $p) {
@@ -319,7 +321,7 @@ function expand_tilde($path)
 
 
 function from_satoshi($s){
-    if (is_int($s)) { 
+    if (is_int($s)) {
         return $s / 1e8;
     }
 
