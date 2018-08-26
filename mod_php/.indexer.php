@@ -11,6 +11,8 @@ if (php_sapi_name() !== 'cli') {
 require_once('.credentials.php');
 require_once('rpcclient.php');
 
+$opts = getopt("", array("reindex"));
+
 $rpc = new RPCClient($rpc_credentials['user'], $rpc_credentials['password'], $rpc_credentials['host'], $rpc_credentials['port'])
     or die("Unable to instantiate RPCClient" . PHP_EOL);
 
@@ -25,9 +27,18 @@ create_tables();
 
 // check the highest block count and index data from mogwaid if there is more
 $blockcount = $rpc->getblockcount();
-$blockcount_db = get_db_blockcount() + 1;
-
+if (array_key_exists("reindex", $opts)) {
+    $mysqli->query("TRUNCATE TABLE `blocks_hashes`");
+    $mysqli->query("TRUNCATE TABLE `block_addresses`");
+    $mysqli->query("TRUNCATE TABLE `transactions_addresses`");
+    $blockcount_db = 0;
+    echo "Reindexing from 0" . PHP_EOL;
+}
+else {
+    $blockcount_db = get_db_blockcount() + 1;
+}
 echo "blockcount: $blockcount vs $blockcount_db" . PHP_EOL;
+
 
 while ($blockcount_db < $blockcount) {
     if ($blockcount_db < 1) {
@@ -43,7 +54,8 @@ while ($blockcount_db < $blockcount) {
         die("Panic!  Received empty blockhash at height $blockcount_db" . PHP_EOL);
     }
 
-    $mysqli->query("INSERT IGNORE INTO `blocks_hashes` (`block`, `hash`) VALUES ($blockcount_db, '$hash')") or die ("invalid query" . PHP_EOL);
+    $mysqli->query("INSERT IGNORE INTO `blocks_hashes` (`block`, `hash`)
+        VALUES ($blockcount_db, '$hash')") or die ("invalid query" . PHP_EOL);
 
     $block = $rpc->getblock($hash);
 
@@ -58,14 +70,9 @@ while ($blockcount_db < $blockcount) {
             $vout = $transaction['vout'];
 
             foreach ($vin as $input) {
-                if (@$input['scriptPubKey']['addresses']) {
-                    foreach ($input['scriptPubKey']['addresses'] as $address) {
-                        $address = $mysqli->real_escape_string($address);
-                        // echo "INSERT IGNORE INTO `blocks_addresses` (`block`, `address`) VALUES ($blockcount_db, '$address')" . PHP_EOL;
-                        $mysqli->query("INSERT IGNORE INTO `blocks_addresses` (`block`, `address`) VALUES ($blockcount_db, '$address')") or die ("invalid query" . PHP_EOL);
-                        // echo "INSERT IGNORE INTO `transactions_addresses` (`transaction`, `address`) VALUES ('$tx', '$address')" . PHP_EOL;
-                        $mysqli->query("INSERT IGNORE INTO `transactions_addresses` (`transaction`, `address`) VALUES ('$tx', '$address')") or die("invalid query" . PHP_EOL);
-                    }
+                if (@$input['address']) {
+                    $mysqli->query("INSERT IGNORE INTO `transactions_addresses` (`transaction`, `address`,`block_index`, `v`)
+                        VALUES ('$tx', '{$input['address']}', '$blockcount_db', 'vin')") or die("invalid query" . PHP_EOL);
                 }
             }
 
@@ -73,10 +80,7 @@ while ($blockcount_db < $blockcount) {
                 if (@$input['scriptPubKey']['addresses']) {
                     foreach ($input['scriptPubKey']['addresses'] as $address) {
                         $address = $mysqli->real_escape_string($address);
-                        // echo "INSERT IGNORE INTO `blocks_addresses` (`block`, `address`) VALUES ($blockcount_db, '$address')" . PHP_EOL;
-                        $mysqli->query("INSERT IGNORE INTO `blocks_addresses` (`block`, `address`) VALUES ($blockcount_db, '$address')") or die ("invalid query" . PHP_EOL);
-                        // echo "INSERT IGNORE INTO `transactions_addresses` (`transaction`, `address`) VALUES ('$tx', '$address')" . PHP_EOL;
-                        $mysqli->query("INSERT IGNORE INTO `transactions_addresses` (`transaction`, `address`) VALUES ('$tx', '$address')") or die("invalid query" . PHP_EOL);
+                        $mysqli->query("INSERT IGNORE INTO `transactions_addresses` (`transaction`, `address`,`block_index`, `v`) VALUES ('$tx', '$address', '$blockcount_db', 'vout')") or die("invalid query" . PHP_EOL);
                     }
                 }
             }
@@ -135,9 +139,12 @@ function create_tables($tablename = null) {
 
     if (!$mysqli->query('select 1 from `transactions_addresses` LIMIT 1')) {
         $query = "CREATE TABLE IF NOT EXISTS `transactions_addresses` (
+              `block_index` int(11) NOT NULL,
               `transaction` char(64) NOT NULL DEFAULT '',
               `address` char(34) NOT NULL DEFAULT '',
-              UNIQUE KEY `ix_transaction_address` (`transaction`,`address`),
+              `v` char(4) NOT NULL DEFAULT '',
+              UNIQUE KEY `ix_transaction_address` (`block_index`, `transaction`,`address`),
+              KEY `ix_block_index` (`block_index`),
               KEY `ix_transaction` (`transaction`),
               KEY `ix_address` (`address`)
             ) ENGINE=InnoDB DEFAULT CHARSET=latin1;
@@ -151,7 +158,7 @@ function create_tables($tablename = null) {
 function get_db_blockcount() {
     global $mysqli;
 
-    $res = $mysqli->query("SELECT max(block) AS mx FROM `blocks_addresses`");
+    $res = $mysqli->query("SELECT max(block_index) AS mx FROM `transactions_addresses`");
     if ($res->num_rows) {
         $row = $res->fetch_row();
         return intval($row[0]);
