@@ -13,6 +13,8 @@ if (empty($rpc_credentials['user']) || empty($rpc_credentials['user'])  || empty
 $rpc = new RPCClient($rpc_credentials['user'], $rpc_credentials['password'], $rpc_credentials['host'], $rpc_credentials['port'])
     or die("Unable to instantiate RPCClient" . PHP_EOL);
 
+$mysqli = new mysqli($db_credentials['host'], $db_credentials['user'], $db_credentials['password'], $db_credentials['name']);
+
 // declare routes
 $r = register_route('GET', '/', "help_function");
 
