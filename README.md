@@ -47,6 +47,13 @@ Error: _Return error string "Invalid address"_
 ## listtransactions
 GET /listtransactions/:address
 
+GET /listtransactions/:address/:height
+
+GET /listtransactions/:address/:height/:numblocks
+
+Success: _Return JSON-encoded array of transactions for this address, optionally starting at a given height and limiting the number of blocks to scan_
+
+
 ## listmirrtransactions
 GET /listmirrtransactions/:address
 
@@ -57,7 +64,7 @@ GET /getblock/:height
 
 GET /getblock/:height/:numblocks
 
-Success: _Return JSON string repesenting a single block (or array of blocks) at the specified height or at current block height_
+Success: _Return JSON string repesenting a single block (or array of blocks if numblocks is passed in) at the specified height or at current block height_
 
 Error: _Return error string "Block height out of range" or "Invalid block count"_
 
