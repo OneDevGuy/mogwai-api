@@ -33,7 +33,7 @@ Add a database and database user in MySQL. i.e.:
 
 Edit .credentials.php with rpc and db credentials.
 
-To bootstrap the database, import mogwai.sql:
+To bootstrap the database, import mogwai.sql from https://tba  :
 
 * mysql mogwai -u mogwai < mogwai.sql   # enter your difficult password when prompted
 
