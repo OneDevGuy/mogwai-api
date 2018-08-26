@@ -319,7 +319,7 @@ function expand_tilde($path)
     return $path;
 }
 
-
+/** Convert Satoshis (int) to float */
 function from_satoshi($s){
     if (is_int($s)) {
         return $s / 1e8;
@@ -328,6 +328,7 @@ function from_satoshi($s){
     return false;
 }
 
+/** Convert float to Satoshis (int) */
 function to_satoshi($m) {
     if (is_numeric($m)) {
         return round($m * 1e8, 8);
