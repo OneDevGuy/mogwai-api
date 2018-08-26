@@ -99,6 +99,18 @@ $r = register_route('GET', '/getevents/:height/:count', function($height, $count
     return get_block(intval($height), intval($count));
 });
 
+$r = register_route('GET', '/listtransactions/:address', function($address) {
+    return list_transactions($address);
+});
+
+$r = register_route('GET', '/listtransactions/:address/:height', function($address, $height) {
+    return list_transactions($address, $height);
+});
+
+$r = register_route('GET', '/listtransactions/:address/:height/:count', function($address, $height, $count) {
+    return list_transactions($address, $height, $count);
+});
+
 // run the application to process the request
 $result = process_route();
 
@@ -166,4 +178,74 @@ function get_block($height = null, $count = 1) {
     return $block_array;
 }
  
+function list_transactions($address, $height = null, $count = null) {
+    global $rpc, $mysqli;
+
+    $WHERE_HEIGHT = '';
+
+    if (is_numeric($height) && $height >= 0) {
+        $height = intval($height);
+        $WHERE_HEIGHT = " AND ta.block_index >= $height ";
+    }
+    else {
+        $height = null;
+    }
+
+    if ($height && is_numeric($count) && $count > 0) {
+        $count = intval($count);
+        $WHERE_HEIGHT .= " AND ta.block_index <= " . ($height + $count);
+    }
+
+
+    $address = $mysqli->real_escape_string($address);
+    $output = array();
+    $res = $mysqli->query("SELECT ta.*, hash
+        FROM `transactions_addresses` ta
+        LEFT JOIN `blocks_hashes` bh on ta.block_index = bh.block
+        WHERE `address` = '$address'
+            $WHERE_HEIGHT
+        ORDER BY ta.block_index
+    ");
+
+    if ($res && $res->num_rows) {
+        while ($row = $res->fetch_assoc()) {
+            $raw_tx = $rpc->getrawtransaction($row['transaction']);
+            $tx = $rpc->decoderawtransaction($raw_tx);
+
+            // refactor the transaction data
+            $my_tx = array();
+            $my_tx['blockindex'] = $row['block_index'];
+            $my_tx['blockhash'] = $row['hash'];
+            $my_tx['amount'] = 0.0;
+            $my_tx['amount_satoshi'] = 0;
+            $my_tx['txid'] = $row['transaction'];
+            $my_tx['category'] = ($row['v'] == "vin") ? "send" : "receive";
+
+            foreach($tx['vin'] as $v) {
+                if (@$v['address'] == $address) {
+                    $my_tx['amount'] -= $v['value'];
+                    $my_tx['amount_satoshi'] -= $v['valueSat'];
+                    $my_tx['category'] = 'send';
+                }
+            }
+            foreach($tx['vout'] as $v) {
+                if (@$v['scriptPubKey']['addresses'] && in_array($address, $v['scriptPubKey']['addresses'])) {
+                    $my_tx['amount'] += $v['value'];
+                    $my_tx['amount_satoshi'] += $v['valueSat'];
+                    if (@$tx['vin'][0]['coinbase']) {
+                        $my_tx['category'] = 'generate';
+                    }
+                    else {
+                        $my_tx['category'] = 'receive';
+                    }
+                }
+            }
+
+
+            $output[] = $my_tx;
+        }
+    }
+
+    return $output;
+}
 
