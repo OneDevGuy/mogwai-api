@@ -7,6 +7,8 @@ You do not need to run all the code in this repository, just the code in the lan
 
 You may write your own. Any API that conforms to the specification in this document, and returns the same results as the reference implementation(s) can be considered a valid mogwai-api.
 
+It is recommended, but not required, that you "Pretty Print" JSON output return values.  However, note that, in order to make direct comparisons, the "test" route should collapse all extraneous whitespace (remove carriage returns, collapse multiple spaces to one space); this will ensure that output and hashes of that output are identical on different systems.
+
 # core dependency
 All implementations will need to connect to a full mogwaid node to provide up-to-the-moment information.  The means of connecting is left as an implementation specific detail for each language and environment.
 
@@ -35,7 +37,7 @@ _Return help contents including the API version, and information about each of t
 ## test
 GET /test
 
-_Return a JSON-encoded object demonstrating the result of test data for each route (except test), and also a hash of all results, for easy comparison of compliance between two implementations_
+_Return a JSON-encoded object demonstrating the result of test data for each route (except test), and also a hash of all results, for easy comparison of compliance between two implementations. IMPORTANT: JSON responses must collapse extraneous whitespace (remove carriage returns and collapse multiple spaces to a single space) in order for different implementations to output the same results and hashes_
 
 ## getbalance
 GET /getbalance/:address
@@ -56,6 +58,13 @@ Success: _Return JSON-encoded array of transactions for this address, optionally
 
 ## listmirrtransactions
 GET /listmirrtransactions/:address
+
+GET /listmirrtransactions/:address/:height
+
+GET /listmirrtransactions/:address/:height/:numblocks
+
+Success: _Return JSON-encoded array of transactions for this address, optionally starting at a given height and limiting the number of blocks to scan_
+
 
 ## getblock
 GET /getblock
