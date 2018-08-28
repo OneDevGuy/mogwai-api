@@ -109,6 +109,18 @@ $r = register_route('GET', '/listtransactions/:address/:height/:count', function
     return list_transactions($address, intval($height), intval($count));
 });
 
+$r = register_route('GET', '/listmirrtransactions/:address', function($address) {
+    return list_mirror_transactions($address);
+});
+
+$r = register_route('GET', '/listmirrtransactions/:address/:height', function($address, $height) {
+    return list_mirror_transactions($address, intval($height));
+});
+
+$r = register_route('GET', '/listmirrtransactions/:address/:height/:count', function($address, $height, $count) {
+    return list_mirror_transactions($address, intval($height), intval($count));
+});
+
 // run the application to process the request
 $result = process_route();
 
@@ -270,4 +282,100 @@ function list_transactions($address, $height = null, $count = null) {
 
     return $output;
 }
+
+function list_mirror_transactions($address, $height = null, $count = null) {
+    global $rpc, $mysqli;
+
+    $max_block = $rpc->getblockcount();
+
+    if (!is_null($height) && $height < 0 || $height > $max_block) {
+        return "Block height out of range";
+    }
+
+    $WHERE_HEIGHT = '';
+
+    if (is_numeric($height) && $height >= 0) {
+        $height = intval($height);
+        $WHERE_HEIGHT = " AND mt.block_index >= $height ";
+    }
+    else {
+        $height = null;
+    }
+
+    if ($height && is_numeric($count) && $count > 0) {
+        $count = intval($count);
+        $WHERE_HEIGHT .= " AND mt.block_index <= " . ($height + $count);
+    }
+
+    $address = $mysqli->real_escape_string($address);
+    $output = array();
+    $res = $mysqli->query("SELECT mt.*, hash
+        FROM `mirror_transactions` mt
+        LEFT JOIN `blocks_hashes` bh on mt.block_index = bh.block
+        WHERE `vout` = '$address'
+            $WHERE_HEIGHT
+        ORDER BY mt.block_index
+    ");
+
+    $block_header = null;
+
+    if ($res && $res->num_rows) {
+
+        while ($row = $res->fetch_assoc()) {
+            if (empty($block_header) || $block_header["height"] != $row["block_index"]) {
+                $block_header = $rpc->getblock($row['hash']);
+            }
+
+            $raw_tx = $rpc->getrawtransaction($row['transaction']);
+            $tx = $rpc->decoderawtransaction($raw_tx);
+
+            // refactor the transaction data
+            $my_tx = array();
+            $my_tx['height'] = $row['block_index'];
+            $my_tx['blockhash'] = $row['hash'];
+            $my_tx['blocktime'] = @$block_header['time'];
+            $my_tx['blockindex'] = array_search($row['transaction'], $block_header['tx']);
+
+            $my_tx['confirmations'] = @$block_header['confirmations'];
+            $my_tx['txid'] = $row['transaction'];
+            $my_tx['category'] = ($row['v'] == "vin") ? "send" : "receive";
+
+            $my_tx['amount'] = 0.0;
+            $my_tx['amount_satoshi'] = 0;
+
+            $my_tx['fee'] = 0;   // fee will be the value of outputs minus value of inputs
+            $my_tx['fee_satoshi'] = 0;
+
+            foreach($tx['vin'] as $v) {
+                $my_tx['fee_satoshi'] += $v['valueSat'];
+                if (@$v['address'] == $address) {
+                    $my_tx['amount'] -= $v['value'];
+                    $my_tx['amount_satoshi'] -= $v['valueSat'];
+                    $my_tx['category'] = 'send';
+                }
+            }
+            foreach($tx['vout'] as $v) {
+                $my_tx['fee_satoshi'] -= $v['valueSat'];
+                if (@$v['scriptPubKey']['addresses'] && in_array($address, $v['scriptPubKey']['addresses'])) {
+                    $my_tx['amount'] += $v['value'];
+                    $my_tx['amount_satoshi'] += $v['valueSat'];
+                    if (@$tx['vin'][0]['coinbase']) {
+                        $my_tx['category'] = 'generate';
+                    }
+                    else {
+                        $my_tx['category'] = 'receive';
+                    }
+                }
+            }
+
+            $my_tx['fee'] = from_satoshi($my_tx['fee_satoshi']);
+
+
+            $output[] = $my_tx;
+        }
+    }
+
+    return $output;
+}
+
 
