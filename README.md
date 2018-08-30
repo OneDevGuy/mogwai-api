@@ -55,6 +55,14 @@ GET /listtransactions/:address/:height/:numblocks
 
 Success: _Return JSON-encoded array of transactions for this address, optionally starting at a given height and limiting the number of blocks to scan_
 
+## createmirtransaction
+GET /createmirtransaction/:address/:amount/:txid/:offset
+
+Where: _offset is the index offset of the input transaction that funds this mirror transaction, address is the destination_
+
+Success: _Hex encoded raw transaction (unsigned)_
+
+Error: _Return error string "Invalid inputs"_
 
 ## listmirrtransactions
 GET /listmirrtransactions/:address
