@@ -121,6 +121,16 @@ $r = register_route('GET', '/listmirrtransactions/:address/:height/:count', func
     return list_mirror_transactions($address, intval($height), intval($count));
 });
 
+$r = register_route('GET', '/createrawtransaction/:transactions/:outputs', function($transactions, $outputs) {
+    return create_raw_transaction($transactions, $outputs);
+});
+
+$r = register_route('GET', '/decoderawtransaction/:hex', function($hex) {
+    global $rpc;
+
+    return $rpc->decoderawtransaction($hex);
+});
+
 // run the application to process the request
 $result = process_route();
 
@@ -378,4 +388,29 @@ function list_mirror_transactions($address, $height = null, $count = null) {
     return $output;
 }
 
+/**
+ * [create_raw_transaction description]
+ * @param  string $transactions JSON blob of input transactions to use
+ * @param  string $outputs      JSON blob of outputs (address and value, or data)
+ * @return mixed               Return value array, or error string "Invalid inputs"
+ * @see mogwai-cli help createrawtransaction
+ */
+function create_raw_transaction($transactions, $outputs) {
+    global $rpc;
 
+    // make sure these are valid JSON strings
+    $in = json_decode($transactions, true);
+    $out = json_decode($outputs, true);
+    
+    if (empty($in) || empty($out)) {
+        return "Invalid inputs";
+    }
+
+    $result = $rpc->createrawtransaction($in, $out);
+
+    if (empty($result)) {
+        return "Invalid inputs";
+    }
+
+    return $result;
+}
