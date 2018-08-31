@@ -85,6 +85,33 @@ while ($blockcount_db < $blockcount) {
                 }
             }
 
+            // if $vin is not coinbase and there is only one vin and one vout, store this as
+            // a potential mirror transaction
+            if (count($vin) == 1 && count($vout) == 1 && empty($vin[0]['coinbase'])) {
+                $vin_address = @$vin[0]['address'];
+                $vout_address = @$vout[0]['scriptPubKey']['addresses'][0];
+
+                if ($vin_address && $vout_address && count($vout[0]['scriptPubKey']['addresses']) == 1) {
+                    // this it not a mirror transaction if the $vout was ever a $vin in another transaction
+                    $query = "SELECT vin FROM `mirror_transactions` WHERE vin = '$vout_address'";
+                    $res_vout = $mysqli->query($query);
+                    if ($res_vout->num_rows) {
+                        continue;
+                    }
+
+                    // delete any other possible mirror transactions if the $vin was ever a vout
+                    $query = "DELETE FROM `mirror_transactions` WHERE vout = '$vin_address'";
+                    $mysqli->query($query);
+
+                    $query = "INSERT IGNORE INTO `mirror_transaction`
+                        (`block_index`, `transaction`, `vin`, `vout`)
+                        VALUES
+                        ($blockcount_db, '$tx', '$vin_address', '$vout_address')
+                    ";
+                    $mysqli->query($query) or die("invalid query: $query" . PHP_EOL);
+                }
+            }
+
         }
         else {
             echo "Could not get raw transaction for $blockcount_db : $tx" . PHP_EOL;
@@ -152,6 +179,20 @@ function create_tables($tablename = null) {
 
         $mysqli->real_query($query);
         echo "Created table `transactions_addresses`" . PHP_EOL;
+    }
+
+    if (!$mysqli->query('select 1 from `mirror_transactions` LIMIT 1')) {
+        $query ="CREATE TABLE IF NOT EXISTS `mirror_transactions` (
+              `block_index` int(11) unsigned NOT NULL,
+              `transaction` varchar(64) NOT NULL DEFAULT '',
+              `vin` varchar(34) NOT NULL DEFAULT '',
+              `vout` varchar(34) NOT NULL DEFAULT '',
+              PRIMARY KEY (`block_index`),
+              KEY `ix_addresses` (`vin`,`vout`)
+            ) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+        ";
+        $mysqli->real_query($query);
+        echo "Created table `mirror_transactions`" . PHP_EOL;
     }
 }
 
