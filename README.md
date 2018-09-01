@@ -21,7 +21,9 @@ In the following, the input types are as follows:
 * :address is a valid Mogwai address ("Base58" string)
 * :height is a non-negative integer
 * :numblocks is a positive integer
+* :offset is a non-negative integer
 * :hex is a hexidecimal string (without leading 0x)
+* :txid is a hexidecimal string (without leading 0x, a transaction id)
 
 All API calls return non-empty results; an API call that returns an empty result is in error.  Simple scalar results are returned as strings representing their value.  Complex/structured results are returned as JSON-encoded strings.
 
