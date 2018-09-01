@@ -125,10 +125,56 @@ $r = register_route('GET', '/createrawtransaction/:transactions/:outputs', funct
     return create_raw_transaction($transactions, $outputs);
 });
 
+$r = register_route('GET', '/sendrawtransaction/:hex', function($hex) {
+    global $rpc;
+
+    return $rpc->sendrawtransaction($hex);
+});
+
 $r = register_route('GET', '/decoderawtransaction/:hex', function($hex) {
     global $rpc;
 
     return $rpc->decoderawtransaction($hex);
+});
+
+$r = register_route('GET', '/createmirtransaction/:addr/:amount/:txid/:offset', function($address, $amount, $txid, $offset) {
+    global $rpc;
+
+    if (!is_numeric($amount) || !is_numeric($offset)) {
+        return "Invalid inputs";
+    }
+
+    if ($amount <= 0 || $offset < 0) {
+        return "Invalid inputs";
+    }
+
+    if (empty($address) || empty($txid)) {
+        return "Invalid inputs";
+    }
+
+    // convert to numeric from string
+    $amount += 0;
+    $offset += 0;
+
+    $in = array();
+    $in[] = array(
+        "txid" => $txid,
+        "vout" => $offset,
+        "sequence" => 9,
+    );
+
+    $out = array(
+        $address => $amount,
+        "data" => strtoupper(bin2hex("mogwai")),
+    );
+
+    $result = $rpc->createrawtransaction($in, $out);
+
+    if (empty($result)) {
+        return "Invalid inputs";
+    }
+
+    return $result;
 });
 
 // run the application to process the request
@@ -401,7 +447,7 @@ function create_raw_transaction($transactions, $outputs) {
     // make sure these are valid JSON strings
     $in = json_decode($transactions, true);
     $out = json_decode($outputs, true);
-    
+
     if (empty($in) || empty($out)) {
         return "Invalid inputs";
     }
