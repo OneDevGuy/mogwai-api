@@ -66,7 +66,7 @@ Success: _Hex encoded raw transaction (unsigned)_
 
 Error: _Return error string "Invalid inputs"_
 
-## listmirrtransactions
+## listmirrtransactions (for address)
 GET /listmirrtransactions/:address
 
 GET /listmirrtransactions/:address/:height
@@ -74,6 +74,15 @@ GET /listmirrtransactions/:address/:height
 GET /listmirrtransactions/:address/:height/:numblocks
 
 Success: _Return JSON-encoded array of transactions for this address, optionally starting at a given height and limiting the number of blocks to scan_
+
+## listallmirrtransactions
+GET /listallmirrtransactions
+
+GET /listallmirrtransactions/:height
+
+GET /listallmirrtransactions/:height/:numblocks
+
+Success: _Return JSON-encoded array of transactions, optionally starting at a given height and limiting the number of blocks to scan_
 
 
 ## getblock
