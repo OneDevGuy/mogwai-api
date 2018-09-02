@@ -58,6 +58,10 @@ while ($blockcount_db < $blockcount) {
         VALUES ($blockcount_db, '$hash')") or die ("invalid query" . PHP_EOL);
 
     $block = $rpc->getblock($hash);
+    // make sure out count is the same as the block index
+    if ($blockcount_db != $block['height']) {
+        die("$blockcount_db != '{$block['height']}'" . PHP_EOL);
+    }
 
     foreach ($block["tx"] as $tx) {
         $tx = $mysqli->real_escape_string($tx);
@@ -103,7 +107,7 @@ while ($blockcount_db < $blockcount) {
                     $query = "DELETE FROM `mirror_transactions` WHERE vout = '$vin_address'";
                     $mysqli->query($query);
 
-                    $query = "INSERT IGNORE INTO `mirror_transaction`
+                    $query = "INSERT IGNORE INTO `mirror_transactions`
                         (`block_index`, `transaction`, `vin`, `vout`)
                         VALUES
                         ($blockcount_db, '$tx', '$vin_address', '$vout_address')
