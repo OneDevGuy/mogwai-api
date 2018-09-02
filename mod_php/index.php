@@ -121,6 +121,18 @@ $r = register_route('GET', '/listmirrtransactions/:address/:height/:count', func
     return list_mirror_transactions($address, intval($height), intval($count));
 });
 
+$r = register_route('GET', '/listallmirrtransactions/', function() {
+    return list_mirror_transactions('');
+});
+
+$r = register_route('GET', '/listallmirrtransactions/:height', function($height) {
+    return list_mirror_transactions('', $height);
+});
+
+$r = register_route('GET', '/listallmirrtransactions/:height/:count', function($height, $count) {
+    return list_mirror_transactions('', $height, $count);
+});
+
 $r = register_route('GET', '/createrawtransaction/:transactions/:outputs', function($transactions, $outputs) {
     return create_raw_transaction($transactions, $outputs);
 });
@@ -253,6 +265,14 @@ function list_transactions($address, $height = null, $count = null) {
         return "Block height out of range";
     }
 
+    $address = $mysqli->real_escape_string($addsress);
+    $WHERE_ADDRESS = "`address` = '$address'";
+    // if ($address) {
+    // }
+    // else {
+    //     $WHERE_ADDRESS = "1";
+    // }
+
     $WHERE_HEIGHT = '';
 
     if (is_numeric($height) && $height >= 0) {
@@ -268,12 +288,11 @@ function list_transactions($address, $height = null, $count = null) {
         $WHERE_HEIGHT .= " AND ta.block_index <= " . ($height + $count);
     }
 
-    $address = $mysqli->real_escape_string($address);
     $output = array();
     $res = $mysqli->query("SELECT ta.*, hash
         FROM `transactions_addresses` ta
         LEFT JOIN `blocks_hashes` bh on ta.block_index = bh.block
-        WHERE `address` = '$address'
+        WHERE $WHERE_ADDRESS
             $WHERE_HEIGHT
         ORDER BY ta.block_index
     ");
@@ -292,6 +311,7 @@ function list_transactions($address, $height = null, $count = null) {
 
             // refactor the transaction data
             $my_tx = array();
+            $my_tx['address'] = $row['address'];
             $my_tx['height'] = $row['block_index'];
             $my_tx['blockhash'] = $row['hash'];
             $my_tx['blocktime'] = @$block_header['time'];
@@ -309,7 +329,7 @@ function list_transactions($address, $height = null, $count = null) {
 
             foreach($tx['vin'] as $v) {
                 $my_tx['fee_satoshi'] += $v['valueSat'];
-                if (@$v['address'] == $address) {
+                if (@$v['address'] == $row['address']) {
                     $my_tx['amount'] -= $v['value'];
                     $my_tx['amount_satoshi'] -= $v['valueSat'];
                     $my_tx['category'] = 'send';
@@ -317,7 +337,7 @@ function list_transactions($address, $height = null, $count = null) {
             }
             foreach($tx['vout'] as $v) {
                 $my_tx['fee_satoshi'] -= $v['valueSat'];
-                if (@$v['scriptPubKey']['addresses'] && in_array($address, $v['scriptPubKey']['addresses'])) {
+                if (@$v['scriptPubKey']['addresses'] && in_array($row['address'], $v['scriptPubKey']['addresses'])) {
                     $my_tx['amount'] += $v['value'];
                     $my_tx['amount_satoshi'] += $v['valueSat'];
                     if (@$tx['vin'][0]['coinbase']) {
@@ -339,13 +359,21 @@ function list_transactions($address, $height = null, $count = null) {
     return $output;
 }
 
-function list_mirror_transactions($address, $height = null, $count = null) {
+function list_mirror_transactions($address = '', $height = null, $count = null) {
     global $rpc, $mysqli;
 
     $max_block = $rpc->getblockcount();
 
     if (!is_null($height) && $height < 0 || $height > $max_block) {
         return "Block height out of range";
+    }
+
+    $address = $mysqli->real_escape_string($address);
+    if ($address) {
+        $WHERE_ADDRESS = "`vout` = '$address'";
+    }
+    else {
+        $WHERE_ADDRESS = "1";
     }
 
     $WHERE_HEIGHT = '';
@@ -363,12 +391,11 @@ function list_mirror_transactions($address, $height = null, $count = null) {
         $WHERE_HEIGHT .= " AND mt.block_index <= " . ($height + $count);
     }
 
-    $address = $mysqli->real_escape_string($address);
     $output = array();
     $res = $mysqli->query("SELECT mt.*, hash
         FROM `mirror_transactions` mt
         LEFT JOIN `blocks_hashes` bh on mt.block_index = bh.block
-        WHERE `vout` = '$address'
+        WHERE $WHERE_ADDRESS
             $WHERE_HEIGHT
         ORDER BY mt.block_index
     ");
@@ -379,14 +406,15 @@ function list_mirror_transactions($address, $height = null, $count = null) {
 
         while ($row = $res->fetch_assoc()) {
             if (empty($block_header) || $block_header["height"] != $row["block_index"]) {
-                $block_header = $rpc->getblock($row['hash']);
             }
-
+                $block_header = $rpc->getblock($row['hash']);
+            // print_r($block_header); echo PHP_EOL;
             $raw_tx = $rpc->getrawtransaction($row['transaction']);
             $tx = $rpc->decoderawtransaction($raw_tx);
 
             // refactor the transaction data
             $my_tx = array();
+            $my_tx['address'] = $row['vout'];
             $my_tx['height'] = $row['block_index'];
             $my_tx['blockhash'] = $row['hash'];
             $my_tx['blocktime'] = @$block_header['time'];
@@ -404,7 +432,7 @@ function list_mirror_transactions($address, $height = null, $count = null) {
 
             foreach($tx['vin'] as $v) {
                 $my_tx['fee_satoshi'] += $v['valueSat'];
-                if (@$v['address'] == $address) {
+                if (@$v['address'] == $row['vout']) {
                     $my_tx['amount'] -= $v['value'];
                     $my_tx['amount_satoshi'] -= $v['valueSat'];
                     $my_tx['category'] = 'send';
@@ -412,7 +440,7 @@ function list_mirror_transactions($address, $height = null, $count = null) {
             }
             foreach($tx['vout'] as $v) {
                 $my_tx['fee_satoshi'] -= $v['valueSat'];
-                if (@$v['scriptPubKey']['addresses'] && in_array($address, $v['scriptPubKey']['addresses'])) {
+                if (@$v['scriptPubKey']['addresses'] && in_array($row['vout'], $v['scriptPubKey']['addresses'])) {
                     $my_tx['amount'] += $v['value'];
                     $my_tx['amount_satoshi'] += $v['valueSat'];
                     if (@$tx['vin'][0]['coinbase']) {
