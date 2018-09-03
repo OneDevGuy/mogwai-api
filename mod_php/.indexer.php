@@ -97,9 +97,12 @@ while ($blockcount_db < $blockcount) {
 
                 if ($vin_address && $vout_address && count($vout[0]['scriptPubKey']['addresses']) == 1) {
                     // this it not a mirror transaction if the $vout was ever a $vin in another transaction
-                    $query = "SELECT vin FROM `mirror_transactions` WHERE vin = '$vout_address'";
+                    $query = "SELECT address FROM `transactions_addresses` WHERE address = '$vout_address' and v = 'vin' LIMIT 1";
                     $res_vout = $mysqli->query($query);
                     if ($res_vout->num_rows) {
+                        // delete for this address in case previous passes messed this up
+                        $query = "DELETE FROM `mirror_transactions` WHERE vout = '$vout_address'";
+                        $mysqli->query($query);
                         continue;
                     }
 
