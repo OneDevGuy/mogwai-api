@@ -73,21 +73,35 @@ while ($blockcount_db < $blockcount) {
             $vin = $transaction['vin'];
             $vout = $transaction['vout'];
 
-            foreach ($vin as $input) {
-                if (@$input['address']) {
-                    $mysqli->query("INSERT IGNORE INTO `transactions_addresses` (`transaction`, `address`,`block_index`, `v`)
-                        VALUES ('$tx', '{$input['address']}', '$blockcount_db', 'vin')") or die("invalid query" . PHP_EOL);
+            $inserts = array();
+
+            foreach ($vin as $in) {
+                if (@$in['address']) {
+                    $address = $mysqli->real_escape_string($in['address']);
+                    $inserts[$address] = 'vin';
                 }
             }
 
-            foreach ($vout as $input) {
-                if (@$input['scriptPubKey']['addresses']) {
-                    foreach ($input['scriptPubKey']['addresses'] as $address) {
+            foreach ($vout as $out) {
+                if (@$out['scriptPubKey']['addresses']) {
+                    foreach ($out['scriptPubKey']['addresses'] as $address) {
                         $address = $mysqli->real_escape_string($address);
-                        $mysqli->query("INSERT IGNORE INTO `transactions_addresses` (`transaction`, `address`,`block_index`, `v`) VALUES ('$tx', '$address', '$blockcount_db', 'vout')") or die("invalid query" . PHP_EOL);
+                        if (@$inserts[$address] == 'vin') {
+                            $inserts[$address] = 'both';
+                        }
+                        else {
+                            $inserts[$address] = 'vout';
+                        }
                     }
                 }
             }
+
+            foreach ($inserts as $address => $v) {
+                $address = $mysqli->real_escape_string($address);
+                $mysqli->query("INSERT IGNORE INTO `transactions_addresses` (`transaction`, `address`,`block_index`, `v`) VALUES ('$tx', '$address', '$blockcount_db', '$v')") or die("invalid query" . PHP_EOL);
+            }
+
+
 
             // if $vin is not coinbase and there is only one vin and one vout, store this as
             // a potential mirror transaction
@@ -181,6 +195,7 @@ function create_tables($tablename = null) {
               KEY `ix_block_index` (`block_index`),
               KEY `ix_transaction` (`transaction`),
               KEY `ix_address` (`address`)
+              KEY `ix_v` (`v`)
             ) ENGINE=InnoDB DEFAULT CHARSET=latin1;
         ";
 
