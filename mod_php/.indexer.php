@@ -161,7 +161,7 @@ function create_tables($tablename = null) {
         $query = "CREATE TABLE IF NOT EXISTS `blocks_hashes` (
               `block` int(11) unsigned NOT NULL,
               `hash` char(64) NOT NULL DEFAULT '',
-              UNIQUE KEY `ix_blocks_hashes` (`block`,`hash`),
+              PRIMARY KEY (`block`,`hash`),
               KEY `ix_block` (`block`),
               KEY `ix_hashes` (`hash`)
             ) ENGINE=InnoDB DEFAULT CHARSET=latin1;
@@ -175,7 +175,7 @@ function create_tables($tablename = null) {
         $query = "CREATE TABLE IF NOT EXISTS `blocks_addresses` (
               `block` int(11) unsigned NOT NULL,
               `address` char(34) NOT NULL DEFAULT '',
-              UNIQUE KEY `ix_block_address` (`block`,`address`),
+              PRIMARY KEY (`block`,`address`),
               KEY `ix_block` (`block`),
               KEY `ix_address` (`address`)
             ) ENGINE=InnoDB DEFAULT CHARSET=latin1;
@@ -191,7 +191,7 @@ function create_tables($tablename = null) {
               `transaction` char(64) NOT NULL DEFAULT '',
               `address` char(34) NOT NULL DEFAULT '',
               `v` char(4) NOT NULL DEFAULT '',
-              UNIQUE KEY `ix_transaction_address` (`block_index`, `transaction`,`address`),
+              PRIMARY KEY (`block_index`, `transaction`,`address`),
               KEY `ix_block_index` (`block_index`),
               KEY `ix_transaction` (`transaction`),
               KEY `ix_address` (`address`)
@@ -209,7 +209,7 @@ function create_tables($tablename = null) {
               `transaction` varchar(64) NOT NULL DEFAULT '',
               `vin` varchar(34) NOT NULL DEFAULT '',
               `vout` varchar(34) NOT NULL DEFAULT '',
-              PRIMARY KEY (`block_index`),
+              PRIMARY KEY (`block_index`, `transaction`),
               KEY `ix_addresses` (`vin`,`vout`)
             ) ENGINE=InnoDB DEFAULT CHARSET=latin1;
         ";
