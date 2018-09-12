@@ -180,10 +180,10 @@ function process_route($route = null) {
         $result = $route['callback']();
         if (is_array($result) || is_object($result)) {
             if (defined('JSON_PRETTY_PRINT')) {
-                $result = json_encode($result, JSON_PRETTY_PRINT);
+                $result = json_encode($result, JSON_PRETTY_PRINT | JSON_PRESERVE_ZERO_FRACTION);
             }
             else {
-                $result = json_encode($result);
+                $result = json_encode($result, JSON_PRESERVE_ZERO_FRACTION);
             }
         }
         echo $result;
@@ -206,10 +206,10 @@ function process_route($route = null) {
     $result = call_user_func_array($route['callback'], $args);
     if (is_array($result) || is_object($result)) {
         if (defined('JSON_PRETTY_PRINT')) {
-            $result = json_encode($result, JSON_PRETTY_PRINT);
+            $result = json_encode($result, JSON_PRETTY_PRINT | JSON_PRESERVE_ZERO_FRACTION);
         }
         else {
-            $result = json_encode($result);
+            $result = json_encode($result, JSON_PRESERVE_ZERO_FRACTION);
         }
     }
     echo $result;

@@ -15,6 +15,16 @@ $rpc = new RPCClient($rpc_credentials['user'], $rpc_credentials['password'], $rp
 
 $mysqli = new mysqli($db_credentials['host'], $db_credentials['user'], $db_credentials['password'], $db_credentials['name']);
 
+// check how close we are to being in sync.  if we are within a few blocks, run the indexer.
+$blockcount = $rpc->getblockcount();
+$blockcount_db = get_db_blocks_count();
+$diff = $blockcount - $blockcount_db;
+if ($diff > 0 && $diff < 10) {
+    ob_start();
+    require_once('.indexer.php');
+    ob_end_clean();
+}
+
 // declare routes
 $r = register_route('GET', '/', "help_function");
 
@@ -34,16 +44,44 @@ $r = register_route('GET', '/getbalance/:address', function($address) {
 
 });
 
-$r = register_route('GET', '/getblock', function() {
-    return get_block(null);
+$r = register_route('GET', '/listunspent/:minConf/:maxConf/:addresses', 'list_unspent');
+
+$r = register_route('GET', '/getblockcount', function() {
+    global $rpc;
+    return $rpc->getblockcount();
 });
 
-$r = register_route('GET', '/getblock/:height', function($height) {
-    return get_block(intval($height));
+$r = register_route('GET', '/getblockhash/:height', function($height) {
+    global $rpc;
+    return $rpc->getblockhash(intval($height));
 });
 
-$r = register_route('GET', '/getblock/:height/:count', function($height, $count) {
-    return get_block(intval($height), intval($count));
+$r = register_route('GET', '/getblockhashes/:height/:limit', function($height, $limit) {
+    global $mysqli;
+
+    $height = intval($height);
+    $limit = intval($limit);
+
+    if ($height < 0 || $limit < 1) {
+        return "Invalid inputs";
+    }
+
+    $query = "SELECT *
+        FROM `blocks_hashes`
+        WHERE `block` >= $height
+        ORDER BY `block`
+        LIMIT $limit
+    ";
+    $res = $mysqli->query($query);
+
+    $data = $res->fetch_all(MYSQLI_ASSOC);
+    return $data;
+
+});
+
+$r = register_route('GET', '/getblock/:hex', function($hex) {
+    global $rpc;
+    return $rpc->getblock($hex);
 });
 
 $r = register_route('GET', '/getevents/:height/:count', function($height, $count) {
@@ -64,10 +102,11 @@ $r = register_route('GET', '/getevents/:height/:count', function($height, $count
     $max_height = $height + $count;
 
     $events = array(
-        "FEED",
-        "CACA",
-        "FACE",
+        "feed",
+        "caca",
+        "face",
     );
+    sort($events);
 
     // if no events specified, return empty JSON array
     if (empty($events)) {
@@ -93,6 +132,13 @@ $r = register_route('GET', '/getevents/:height/:count', function($height, $count
     // return $query;
     $res = $mysqli->query($query);
     $data = $res->fetch_all(MYSQLI_ASSOC);
+
+    // backfill data with which events it found
+    foreach ($data as $key => $val) {
+        foreach ($events as $ev) {
+            $data[$key][$ev] = strpos($val['hash'], $ev);
+        }
+    }
 
     return $data;
 });
@@ -189,71 +235,60 @@ $r = register_route('GET', '/createmirtransaction/:addr/:amount/:txid/:offset', 
     return $result;
 });
 
+$r = register_route('GET', '/pubkey2address/:pubkey', function($pubkey) {
+    global $rpc;
+
+    $res = $rpc->pubkey2address($pubkey);
+    if (empty($res)) {
+        return array(
+            "isvalid" => false,
+            "pubKeyIsFullyValid" => false,
+            "address" => ""
+        );
+    }
+
+    return $res;
+});
+
+$r = register_route('GET', '/validateaddress/:address', function($address) {
+    global $rpc;
+
+    if (empty($address)) {
+        return array(
+            "isvalid" => false
+        );
+    }
+
+    return $rpc->validateaddress($address);
+});
+
+
+
+
+
+
+
 // run the application to process the request
 $result = process_route();
 
 
 
+///////////// funcs
+
+function get_db_blocks_count() {
+    global $mysqli;
+
+    $res = $mysqli->query("SELECT max(block_index) AS mx FROM `transactions_addresses`");
+    if ($res->num_rows) {
+        $row = $res->fetch_row();
+        return intval($row[0]);
+    }
+
+    return -1;
+}
 
 function help_function() {
     return "help contents";
-}
-
-
-function get_block($height = null, $count = 1) {
-    global $rpc;
-
-    $block_array = array();
-
-    if (intval($count) < 1) {
-        return "Invalid block count";
-    }
-    $found = 0;
-
-    if ($height === null) {
-        $block_hash = $rpc->getbestblockhash();
-    }
-    else {
-        $block_hash = $rpc->getblockhash(intval($height));
-        if (!$block_hash) {
-            return $rpc->error;
-        }
-    }
-
-    while ($found < $count) {
-        $found++;
-        if ($block_hash) {
-            $block = $rpc->getblock($block_hash);
-            if ($block) {
-                if (!empty($block['tx'])) {
-                    foreach ($block['tx'] as $key => $tx_hash) {
-                        $tx = $rpc->getrawtransaction($tx_hash);
-
-                        if ($tx) {
-                            $tx = $rpc->decoderawtransaction($tx);
-                        }
-
-                        if ($tx) {
-                            $block['tx'][$key] = $tx;
-                        }
-                    }
-                }
-
-                if ($count == 1) {
-                    return $block;
-                }
-                else {
-                    $block_array[] = $block;
-                    $block_hash = @$block['nextblockhash'];
-                }
-            }
-            else {
-                return $rpc->error;
-            }
-        }
-    }
-
-    return $block_array;
 }
 
 function list_transactions($address, $height = null, $count = null) {
@@ -265,14 +300,8 @@ function list_transactions($address, $height = null, $count = null) {
         return "Block height out of range";
     }
 
-    $address = $mysqli->real_escape_string($addsress);
+    $address = $mysqli->real_escape_string($address);
     $WHERE_ADDRESS = "`address` = '$address'";
-    // if ($address) {
-    // }
-    // else {
-    //     $WHERE_ADDRESS = "1";
-    // }
-
     $WHERE_HEIGHT = '';
 
     if (is_numeric($height) && $height >= 0) {
@@ -289,13 +318,14 @@ function list_transactions($address, $height = null, $count = null) {
     }
 
     $output = array();
-    $res = $mysqli->query("SELECT ta.*, hash
+    $query = "SELECT ta.*, hash
         FROM `transactions_addresses` ta
         LEFT JOIN `blocks_hashes` bh on ta.block_index = bh.block
         WHERE $WHERE_ADDRESS
             $WHERE_HEIGHT
         ORDER BY ta.block_index
-    ");
+    ";
+    $res = $mysqli->query($query);
 
     $block_header = null;
 
@@ -312,7 +342,7 @@ function list_transactions($address, $height = null, $count = null) {
             // refactor the transaction data
             $my_tx = array();
             $my_tx['address'] = $row['address'];
-            $my_tx['height'] = $row['block_index'];
+            $my_tx['height'] = intval($row['block_index']);
             $my_tx['blockhash'] = $row['hash'];
             $my_tx['blocktime'] = @$block_header['time'];
             $my_tx['blockindex'] = array_search($row['transaction'], $block_header['tx']);
@@ -347,6 +377,10 @@ function list_transactions($address, $height = null, $count = null) {
                         $my_tx['category'] = 'receive';
                     }
                 }
+            }
+
+            if ($my_tx['amount_satoshi'] < 0) {
+                $my_tx['category'] = 'send';
             }
 
             $my_tx['fee'] = from_satoshi($my_tx['fee_satoshi']);
@@ -392,22 +426,23 @@ function list_mirror_transactions($address = '', $height = null, $count = null) 
     }
 
     $output = array();
-    $res = $mysqli->query("SELECT mt.*, hash
+    $query = "SELECT mt.*, hash
         FROM `mirror_transactions` mt
         LEFT JOIN `blocks_hashes` bh on mt.block_index = bh.block
         WHERE $WHERE_ADDRESS
             $WHERE_HEIGHT
         ORDER BY mt.block_index
-    ");
+    ";
+
+    $res = $mysqli->query($query);
 
     $block_header = null;
-
     if ($res && $res->num_rows) {
 
         while ($row = $res->fetch_assoc()) {
-            if (empty($block_header) || $block_header["height"] != $row["block_index"]) {
-            }
-                $block_header = $rpc->getblock($row['hash']);
+            // if (empty($block_header) || $block_header["height"] != $row["block_index"]) {
+            // }
+            $block_header = $rpc->getblock($row['hash']);
             // print_r($block_header); echo PHP_EOL;
             $raw_tx = $rpc->getrawtransaction($row['transaction']);
             $tx = $rpc->decoderawtransaction($raw_tx);
@@ -415,14 +450,15 @@ function list_mirror_transactions($address = '', $height = null, $count = null) 
             // refactor the transaction data
             $my_tx = array();
             $my_tx['address'] = $row['vout'];
-            $my_tx['height'] = $row['block_index'];
+            $my_tx['from_address'] = $row['vin'];
+            $my_tx['height'] = intval($row['block_index']);
             $my_tx['blockhash'] = $row['hash'];
             $my_tx['blocktime'] = @$block_header['time'];
             $my_tx['blockindex'] = array_search($row['transaction'], $block_header['tx']);
 
             $my_tx['confirmations'] = @$block_header['confirmations'];
             $my_tx['txid'] = $row['transaction'];
-            $my_tx['category'] = ($row['v'] == "vin") ? "send" : "receive";
+            $my_tx['category'] = "receive";
 
             $my_tx['amount'] = 0.0;
             $my_tx['amount_satoshi'] = 0;
@@ -441,6 +477,71 @@ function list_mirror_transactions($address = '', $height = null, $count = null) 
             foreach($tx['vout'] as $v) {
                 $my_tx['fee_satoshi'] -= $v['valueSat'];
                 if (@$v['scriptPubKey']['addresses'] && in_array($row['vout'], $v['scriptPubKey']['addresses'])) {
+                    $my_tx['amount'] += $v['value'];
+                    $my_tx['amount_satoshi'] += $v['valueSat'];
+                    if (@$tx['vin'][0]['coinbase']) {
+                        $my_tx['category'] = 'generate';
+                    }
+                    else {
+                        $my_tx['category'] = 'receive';
+                    }
+                }
+            }
+
+            $my_tx['fee'] = from_satoshi($my_tx['fee_satoshi']);
+
+
+            $output[] = $my_tx;
+        }
+    }
+
+    $txs = array();
+    if ($address && (is_null($count) || $max_block < ($height + $count))) {
+        $addrmempool = $rpc->getaddressmempool(array("addresses" => array($address)));
+
+        // collect unique transactions from mempool
+        foreach ($addrmempool as $mem) {
+            $txs[$mem["txid"]] = $mem["timestamp"];
+        }
+
+        // process each transaction in mempool
+        foreach ($txs as $txid => $timestamp) {
+            $raw_tx = $rpc->getrawtransaction($txid);
+            $tx = $rpc->decoderawtransaction($raw_tx);
+
+            // refactor the transaction data
+            $my_tx = array();
+            $my_tx['address'] = $address;
+            // $my_tx['from_address'] = $row['vin'];
+            $my_tx['height'] = -1;
+            $my_tx['blockhash'] = '';
+            $my_tx['blocktime'] = $timestamp;
+            $my_tx['blockindex'] = -1;
+
+            $my_tx['confirmations'] = 0;
+            $my_tx['txid'] = $txid;
+            $my_tx['category'] = "receive";
+
+            $my_tx['amount'] = 0.0;
+            $my_tx['amount_satoshi'] = 0;
+
+            $my_tx['fee'] = 0;   // fee will be the value of outputs minus value of inputs
+            $my_tx['fee_satoshi'] = 0;
+
+            foreach($tx['vin'] as $v) {
+                $my_tx['fee_satoshi'] += $v['valueSat'];
+                if (@$v['address'] == $address) {
+                    $my_tx['amount'] -= $v['value'];
+                    $my_tx['amount_satoshi'] -= $v['valueSat'];
+                    $my_tx['category'] = 'send';
+                }
+                else {
+                    $my_tx["from_address"] = $v["address"];
+                }
+            }
+            foreach($tx['vout'] as $v) {
+                $my_tx['fee_satoshi'] -= $v['valueSat'];
+                if (@$v['scriptPubKey']['addresses'] && in_array($address, $v['scriptPubKey']['addresses'])) {
                     $my_tx['amount'] += $v['value'];
                     $my_tx['amount_satoshi'] += $v['valueSat'];
                     if (@$tx['vin'][0]['coinbase']) {
@@ -487,4 +588,84 @@ function create_raw_transaction($transactions, $outputs) {
     }
 
     return $result;
+}
+
+function list_unspent($minConf, $maxConf, $addresses) {
+    global $rpc, $mysqli;
+
+    $minConf = intval($minConf);
+    $maxConf = intval($maxConf);
+
+    if ($minConf < 0 || $maxConf < $minConf) {
+        return "Invalid inputs";
+    }
+
+    $addrs = explode(',', $addresses);
+
+    $blockcount = $rpc->getblockcount();
+    $minBlock = $blockcount - $maxConf;
+    $maxBlock = $blockcount - $minConf;
+
+    if ($minBlock <= 0) {
+        $minBlock = 0;
+    }
+
+    if ($maxBlock <= 0) {
+        return "Invalid inputs";
+    }
+
+    $WHERE_ADDRESS = '';
+    foreach ($addrs as $address) {
+        $address = trim($address);
+
+        if (empty($WHERE_ADDRESS)) {
+            $WHERE_ADDRESS = " (";
+        }
+        else {
+            $WHERE_ADDRESS .=  " OR ";
+        }
+
+        $address = $mysqli->real_escape_string($address);
+        $WHERE_ADDRESS .= "address = '$address'";
+    }
+    $WHERE_ADDRESS .= ') ';
+
+    $query = "SELECT *
+        FROM transactions_addresses
+        WHERE (v = 'vout' OR v = 'both')
+            AND block_index BETWEEN $minBlock AND $maxBlock
+            AND $WHERE_ADDRESS
+        ORDER BY block_index ASC
+    ";
+
+    $vouts = $mysqli->query($query);
+    $data = $vouts->fetch_all(MYSQLI_ASSOC);
+
+    $unspent = array();
+    foreach ($data as $row) {
+        // check the transaction to see if the vout with this address has been spent
+        $tx_raw = $rpc->getrawtransaction($row['transaction']);
+        $tx = $rpc->decoderawtransaction($tx_raw);
+
+        if ($tx && @$tx['vout']) {
+            foreach ($tx['vout'] as $ix => $vout) {
+                if (@$vout['scriptPubKey']['addresses'] && in_array($row['address'], $vout['scriptPubKey']['addresses']) && empty($vout['spentTxId'])) {
+                    $unspent[] = array(
+                        "txid" => $row['transaction'],
+                        "vout" => $ix,
+                        "address" => $row['address'],
+                        "scriptPubKey" => $vout['scriptPubKey']['hex'],
+                        "amount" => $vout['value'],
+                        "confirmations" => $blockcount - $row['block_index'],
+                    );
+                }
+            }
+        }
+    }
+
+    if (count($unspent) < 1) {
+        return "[]";
+    }
+
+    return $unspent;
 }

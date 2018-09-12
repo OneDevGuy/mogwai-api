@@ -5,7 +5,7 @@
  */
 
 if (php_sapi_name() !== 'cli') {
-    die("Command line only" . PHP_EOL);
+    //die("Command line only" . PHP_EOL);
 }
 
 require_once('.credentials.php');
@@ -105,7 +105,7 @@ while ($blockcount_db < $blockcount) {
 
             // if $vin is not coinbase and there is only one vin and one vout, store this as
             // a potential mirror transaction
-            if (count($vin) == 1 && count($vout) == 1 && empty($vin[0]['coinbase'])) {
+            if (count($vin) == 1 && empty($vin[0]['coinbase'])) {
                 $vin_address = @$vin[0]['address'];
                 $vout_address = @$vout[0]['scriptPubKey']['addresses'][0];
 

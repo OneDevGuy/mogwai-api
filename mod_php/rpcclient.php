@@ -86,19 +86,30 @@ class RPCClient
 
     public $whitelist_mode = true;
     private $whitelist_functions = array(
+        //"getbalance",
+        "getaddressbalance",
+
         "listtransactions",
         "listmirrtransaction",
+
+        "getblockcount",
         "getblockhash",
         "getbestblockhash",
+
         "getblock",
         "getblocks",
+        "getblockheader",
+
+        "createrawtransaction",
         "sendrawtransaction",
-        "getaddressbalance",
-        "getbalance",
-        "getblockcount",
         "getrawtransaction",
         "decoderawtransaction",
-        "getblockheader",
+
+        "validateaddress",
+        "pubkey2address",
+
+        "getrawmempool",
+        "getaddressmempool",
 
 
         // "help",
