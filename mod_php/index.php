@@ -28,6 +28,26 @@ if ($diff > 0 && $diff < 10) {
 // declare routes
 $r = register_route('GET', '/', "help_function");
 
+$r = register_route('GET', '/test/:a', function($a) {
+    return test_route($a);
+});
+
+$r = register_route('GET', '/test/:a/:b', function($a, $b) {
+    return test_route($a, $b);
+});
+
+$r = register_route('GET', '/test/:a/:b/:c', function($a, $b, $c) {
+    return test_route($a, $b, $c);
+});
+
+$r = register_route('GET', '/test/:a/:b/:c/:d', function($a, $b, $c, $d) {
+    return test_route($a, $b, $c, $d);
+});
+
+$r = register_route('GET', '/test/:a/:b/:c/:d/:e', function($a, $b, $c, $d, $e) {
+    return test_route($a, $b, $c, $d, $e);
+});
+
 $r = register_route('GET', '/help', "help_function");
 
 $r = register_route('GET', '/getbalance/:address', function($address) {
@@ -48,12 +68,24 @@ $r = register_route('GET', '/listunspent/:minConf/:maxConf/:addresses', 'list_un
 
 $r = register_route('GET', '/getblockcount', function() {
     global $rpc;
-    return $rpc->getblockcount();
+    $result = $rpc->getblockcount();
+
+    if (empty($result)) {
+        $result = "Invalid inputs";
+    }
+
+    return $result;
 });
 
 $r = register_route('GET', '/getblockhash/:height', function($height) {
     global $rpc;
-    return $rpc->getblockhash(intval($height));
+    $result = $rpc->getblockhash(intval($height));
+
+    if (empty($result)) {
+        $result = "Invalid inputs";
+    }
+
+    return $result;
 });
 
 $r = register_route('GET', '/getblockhashes/:height/:limit', function($height, $limit) {
@@ -669,3 +701,29 @@ function list_unspent($minConf, $maxConf, $addresses) {
 
     return $unspent;
 }
+
+
+function test_route() {
+    $args = array_filter(func_get_args());
+    $route_path = implode('/', $args);
+    ob_start();
+    $route = get_route($route_path, 'GET');
+    process_route($route);
+    $result = ob_get_clean();
+
+    // clean up the result (trim, normalize white space, remove carriage returns, etc)
+    $result = trim($result);
+    $result = preg_replace('/[\r\n]/', '', $result);
+    $result = preg_replace('/\t/', ' ', $result);
+    $result = preg_replace('/ +/', ' ', $result);
+    $result = preg_replace('/\[ +/', '[', $result);
+    $result = preg_replace('/ +\]/', ']', $result);
+    $result = preg_replace('/\{ +/', '{', $result);
+    $result = preg_replace('/ +\}/', '}', $result);
+
+    // return $result;
+
+    return hash("sha256", $result);
+
+}
+
