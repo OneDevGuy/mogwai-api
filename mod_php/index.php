@@ -56,7 +56,7 @@ $r = register_route('GET', '/getbalance/:address', function($address) {
     $arg = array("addresses" => array($address));
     $result = $rpc->getaddressbalance($arg);
     if ($rpc->error) {
-        return $rpc->error;
+        return "Invalid inputs";
     }
     else {
         return from_satoshi($result["balance"]);
@@ -124,11 +124,11 @@ $r = register_route('GET', '/getevents/:height/:count', function($height, $count
     $max_block = $rpc->getblockcount();
 
     if ($height < 0 || $height > $max_block) {
-        return "Block height out of range";
+        return "Invalid inputs";
     }
 
     if ($count < 1) {
-        return "Invalid block count";
+        return "Invalid inputs";
     }
 
     $max_height = $height + $count;
