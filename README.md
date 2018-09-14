@@ -7,7 +7,14 @@ You do not need to run all the code in this repository, just the code in the lan
 
 You may write your own. Any API that conforms to the specification in this document, and returns the same results as the reference implementation(s) can be considered a valid mogwai-api.
 
-It is recommended, but not required, that you "Pretty Print" JSON output return values.  However, note that, in order to make direct comparisons, the "test" route should collapse all extraneous whitespace (remove carriage returns, collapse multiple spaces to one space); this will ensure that output and hashes of that output are identical on different systems.
+It is recommended, but not required, that you "Pretty Print" JSON output return values.  However, note that, in order to make direct comparisons, the "test" route should collapse all extraneous whitespace (remove carriage returns, collapse multiple spaces to one space); this will ensure that output and hashes of that output are identical on different systems. Conformant JSON for comparisons need to:
+
+* Trim leading and trailing space
+* Remove carriage return and line feed \r \n
+* Replace tab with space
+* Collapse multiple spaces to a single splace
+* Remove space after { } \[ \] and end of quote "
+* Allow space after , :
 
 # core dependency
 All implementations will need to connect to a full mogwaid node to provide up-to-the-moment information.  The means of connecting is left as an implementation specific detail for each language and environment.
@@ -19,9 +26,10 @@ For simplicity, all routes use GET.
 
 In the following, the input types are as follows:
 * :address is a valid Mogwai address ("Base58" string)
-* :height is a non-negative integer
-* :numblocks is a positive integer
-* :offset is a non-negative integer
+* :height is a non-negative integer (including 0)
+* :limit is a positive integer
+* :numblocks is a positive integer 
+* :offset is a non-negative integer (including 0)
 * :hex is a hexidecimal string (without leading 0x)
 * :txid is a hexidecimal string (without leading 0x, a transaction id)
 
@@ -37,16 +45,25 @@ GET /help
 _Return help contents including the API version, and information about each of the routes supported_
 
 ## test
-GET /test
+GET /test/*
+
+Where * is one of the valid routes below.
 
 _Return a JSON-encoded object demonstrating the result of test data for each route (except test), and also a hash of all results, for easy comparison of compliance between two implementations. IMPORTANT: JSON responses must collapse extraneous whitespace (remove carriage returns and collapse multiple spaces to a single space) in order for different implementations to output the same results and hashes_
+
+## validateaddress
+GET /validateaddress/:address
+
+Success: _Return scalar string representing a floating point value for the balance of the provided address_
+
+Error: _Return JSON array with key "isvalid" set to true or false_
 
 ## getbalance
 GET /getbalance/:address
 
 Success: _Return scalar string representing a floating point value for the balance of the provided address_
 
-Error: _Return error string "Invalid address"_
+Error: _Return error string "Invalid inputs"_
 
 ## listtransactions
 GET /listtransactions/:address
@@ -84,24 +101,47 @@ GET /listallmirrtransactions/:height/:numblocks
 
 Success: _Return JSON-encoded array of transactions, optionally starting at a given height and limiting the number of blocks to scan_
 
+## getblockcount
+GET /blockcount
+
+_Return number of blocks_
+
+## getblockhash
+GET /getblockhash/:height
+
+Success: _Return block hash at the specified height_
+
+Error: _Return error string "Invalid inputs"_
+
+## getblockhashes
+GET /getblockhashes/:height/:limit
+
+Success: _Return array of block hashes at the specified height, with a limit of hashes to return_
+
+Error: _Return error string "Invalid inputs"_
 
 ## getblock
-GET /getblock
-
-GET /getblock/:height
+GET /getblock/:hex
 
 GET /getblock/:height/:numblocks
 
-Success: _Return JSON string repesenting a single block (or array of blocks if numblocks is passed in) at the specified height or at current block height_
+Success: _Return JSON string repesenting a single block_
 
-Error: _Return error string "Block height out of range" or "Invalid block count"_
+Error: _Return error string "Invalid inputs"_
 
 
 ## getevents
 GET /getevents/:height/:numblocks
 
+## decoderawtransaction
+GET /decoderawtransaction/:hex
+
+_Return JSON encoded transaction_
+
 ## sendrawtransaction
 GET /sendrawtransaction/:hex
+
+_Return transaction id (hex)_
 
 # 404 not found 
 Any unmatched route should return the literal text "404: No route found", including valid routes that are not yet implemented.
