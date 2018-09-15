@@ -51,17 +51,11 @@ $r = register_route('GET', '/test/:a/:b/:c/:d/:e', function($a, $b, $c, $d, $e) 
 $r = register_route('GET', '/help', "help_function");
 
 $r = register_route('GET', '/getbalance/:address', function($address) {
-    global $rpc;
+    return get_balance($address);
+});
 
-    $arg = array("addresses" => array($address));
-    $result = $rpc->getaddressbalance($arg);
-    if ($rpc->error) {
-        return "Invalid inputs";
-    }
-    else {
-        return from_satoshi($result["balance"]);
-    }
-
+$r = register_route('GET', '/getbalancemany/:addresses', function($addresses) {
+    return get_balance_many($addresses);
 });
 
 $r = register_route('GET', '/listunspent/:minConf/:maxConf/:addresses', 'list_unspent');
@@ -199,6 +193,21 @@ $r = register_route('GET', '/listmirrtransactions/:address/:height/:count', func
     return list_mirror_transactions($address, intval($height), intval($count));
 });
 
+
+
+$r = register_route('GET', '/listmirrtransactionsmany/:addresses', function($addresses) {
+    return list_mirror_transactions_many($addresses);
+});
+
+$r = register_route('GET', '/listmirrtransactionsmany/:addresses/:height', function($addresses, $height) {
+    return list_mirror_transactions_many($addresses, intval($height));
+});
+
+$r = register_route('GET', '/listmirrtransactionsmany/:addresses/:height/:count', function($addresses, $height, $count) {
+    return list_mirror_transactions_many($addresses, intval($height), intval($count));
+});
+
+
 $r = register_route('GET', '/listallmirrtransactions/', function() {
     return list_mirror_transactions('');
 });
@@ -321,6 +330,35 @@ function get_db_blocks_count() {
 
 function help_function() {
     return "help contents";
+}
+
+function get_balance($address) {
+    global $rpc;
+
+    // convert address to an array
+    $addrs = explode(',', $address);
+    $addrs = array_map('trim', $addrs);
+
+    $arg = array("addresses" => $addrs);
+    $result = $rpc->getaddressbalance($arg);
+    if ($rpc->error) {
+        return "Invalid inputs";
+    }
+    else {
+        return from_satoshi($result["balance"]);
+    }
+}
+
+function get_balance_many($addresses) {
+    $addrs = explode(',', $addresses);
+    $addrs = array_map('trim', $addrs);
+
+    $output = array();
+    foreach ($addrs as $addr) {
+        $output[$addr] = get_balance($addr);
+    }
+
+    return $output;
 }
 
 function list_transactions($address, $height = null, $count = null) {
@@ -593,6 +631,21 @@ function list_mirror_transactions($address = '', $height = null, $count = null) 
     }
 
     return $output;
+}
+
+
+function list_mirror_transactions_many($addresses, $height = null, $count = null) {
+    $addrs = explode(',', $addresses);
+
+    $output = array();
+    foreach ($addrs as $addr) {
+
+        $addr = trim($addr);
+        $output[$addr] = list_mirror_transactions($addr, $height, $count);
+    }
+
+    return $output;
+
 }
 
 /**
