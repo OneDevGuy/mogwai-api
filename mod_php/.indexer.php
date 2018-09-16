@@ -194,7 +194,7 @@ function create_tables($tablename = null) {
               PRIMARY KEY (`block_index`, `transaction`,`address`),
               KEY `ix_block_index` (`block_index`),
               KEY `ix_transaction` (`transaction`),
-              KEY `ix_address` (`address`)
+              KEY `ix_address` (`address`),
               KEY `ix_v` (`v`)
             ) ENGINE=InnoDB DEFAULT CHARSET=latin1;
         ";
