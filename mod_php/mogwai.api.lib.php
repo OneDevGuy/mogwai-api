@@ -22,13 +22,18 @@ function get_route() {
 
     // strip off directory name of this script to get base dir
     $dirname = dirname(@$_SERVER['SCRIPT_FILENAME']);
-
+    
     // ignore document_root portion to reveal path to this parent dir
     $dirname = str_replace(@$_SERVER['DOCUMENT_ROOT'], '', $dirname);
 
-    // strip out dirname from the request
-    $request = str_replace($dirname . '/', '', @$_SERVER['REDIRECT_URL']);
-
+    // strip out dirname, or leading slash from the request
+    if ($dirname) { 
+        $request = str_replace($dirname . '/', '', @$_SERVER['REDIRECT_URL']); 
+    }
+    else { 
+        $request = ltrim(@$_SERVER['REDIRECT_URL'], '/'); 
+    }
+    
     // get the http verb
     $verb = @$_SERVER['REQUEST_METHOD'] ? $_SERVER['REQUEST_METHOD'] : 'GET';
 
