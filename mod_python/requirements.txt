@@ -1,0 +1,12 @@
+Click==7.0
+configobj==5.0.6
+Flask==1.0.2
+Flask-Wallet-RPC==0.1.5
+itsdangerous==1.1.0
+Jinja2==2.10
+MarkupSafe==1.1.0
+pycurl==7.43.0.2
+six==1.11.0
+slick-bitcoinrpc==0.1.4
+ujson==1.35
+Werkzeug==0.14.1

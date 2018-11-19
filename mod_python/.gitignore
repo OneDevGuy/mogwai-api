@@ -1,0 +1,11 @@
+__pycache__/
+.pytest_cache/
+.Python
+[Bb]in
+[Ii]nclude
+[Ll]ib
+pip-selfcheck.json
+.DS_Store
+settings.py
+info/
+share/
